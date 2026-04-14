@@ -8,43 +8,66 @@
     <script src="https://unpkg.com/html5-qrcode"></script>
 </head>
 <body class="bg-gray-900 min-h-screen flex flex-col items-center justify-center p-4">
-    <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-sm">
+    <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-sm flex flex-col items-center">
         <h2 class="text-xl font-bold text-center mb-4 text-gray-800">Scan QR Santri</h2>
         
         <!-- Area Scanner -->
-        <div id="reader" class="w-full rounded-xl overflow-hidden border-4 border-green-500"></div>
+        <div id="reader" class="w-full rounded-xl overflow-hidden border-4 border-green-500 bg-gray-100 flex items-center justify-center min-h-[250px] relative">
+            <span id="loading-text" class="text-gray-500 font-semibold animate-pulse absolute">Memulai Kamera...</span>
+        </div>
         
         <p class="text-center text-xs text-gray-500 mt-4 font-semibold">
-            Arahkan kamera ke QR Code. Jendela ini akan tertutup otomatis saat berhasil.
+            Arahkan kamera belakang ke QR Code. Jendela ini otomatis tertutup saat berhasil membaca QR.
         </p>
-        <button onclick="window.close()" class="w-full mt-4 bg-red-50 text-red-600 font-bold py-2 rounded-lg hover:bg-red-100">Batal & Tutup</button>
+        <button onclick="tutupScanner()" class="w-full mt-4 bg-red-50 text-red-600 font-bold py-3 rounded-xl hover:bg-red-100 transition">Batal & Tutup</button>
     </div>
 
     <script>
+        // Menggunakan Html5Qrcode (core) alih-alih Scanner UI untuk bisa force auto-start
+        const html5QrCode = new Html5Qrcode("reader");
+
         function onScanSuccess(decodedText, decodedResult) {
-            // Hentikan scanner agar tidak scan dobel
-            html5QrcodeScanner.clear();
-            
-            // Cek apakah tab ini dibuka oleh App Script
-            if (window.opener) {
-                // Kirim data UID kembali ke tab App Script
-                window.opener.postMessage({ scannedUid: decodedText }, "*");
-                
-                // Tutup tab ini otomatis
-                window.close(); 
-            } else {
-                alert("Hasil Scan: " + decodedText + "\n\n(Peringatan: Buka scanner ini melalui tombol di Aplikasi Bank Pesantren)");
-            }
+            // Hentikan scanner saat berhasil
+            html5QrCode.stop().then(() => {
+                // Cek apakah tab ini dibuka oleh App Script (window.opener)
+                if (window.opener) {
+                    // Kirim data UID kembali ke tab App Script
+                    window.opener.postMessage({ scannedUid: decodedText }, "*");
+                    
+                    // Tutup tab otomatis
+                    window.close(); 
+                } else {
+                    alert("Berhasil Scan!\nHasil UID: " + decodedText + "\n\n(Tutup tab ini untuk kembali)");
+                }
+            }).catch(err => {
+                console.error("Gagal menghentikan scanner", err);
+            });
         }
 
-        // Konfigurasi Kamera Live
-        let html5QrcodeScanner = new Html5QrcodeScanner(
-            "reader",
-            { fps: 15, qrbox: {width: 250, height: 250}, aspectRatio: 1.0 },
-            false
-        );
-            
-        html5QrcodeScanner.render(onScanSuccess);
+        // Konfigurasi agar langsung memaksa menggunakan kamera belakang ("environment")
+        const config = { fps: 15, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 };
+        
+        // Memulai kamera secara otomatis
+        html5QrCode.start(
+            { facingMode: "environment" }, // Kamera belakang
+            config, 
+            onScanSuccess
+        ).then(() => {
+            // Sembunyikan teks loading ketika kamera mulai tampil
+            document.getElementById('loading-text').style.display = 'none';
+        }).catch((err) => {
+            console.error("Gagal memulai kamera", err);
+            document.getElementById('loading-text').innerHTML = "<span class='text-red-500 text-center block px-4'>Akses Kamera Ditolak.<br>Pastikan izin diberikan.</span>";
+            alert("Error Kamera: Tidak dapat mengakses kamera perangkat. Pastikan Anda telah memberikan izin di pengaturan browser.");
+        });
+
+        function tutupScanner() {
+            if(html5QrCode.isScanning) {
+                html5QrCode.stop().then(() => window.close()).catch(() => window.close());
+            } else {
+                window.close();
+            }
+        }
     </script>
 </body>
 </html>
