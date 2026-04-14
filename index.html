@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live QR Scanner</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+</head>
+<body class="bg-gray-900 min-h-screen flex flex-col items-center justify-center p-4">
+    <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-sm">
+        <h2 class="text-xl font-bold text-center mb-4 text-gray-800">Scan QR Santri</h2>
+        
+        <!-- Area Scanner -->
+        <div id="reader" class="w-full rounded-xl overflow-hidden border-4 border-green-500"></div>
+        
+        <p class="text-center text-xs text-gray-500 mt-4 font-semibold">
+            Arahkan kamera ke QR Code. Jendela ini akan tertutup otomatis saat berhasil.
+        </p>
+        <button onclick="window.close()" class="w-full mt-4 bg-red-50 text-red-600 font-bold py-2 rounded-lg hover:bg-red-100">Batal & Tutup</button>
+    </div>
+
+    <script>
+        function onScanSuccess(decodedText, decodedResult) {
+            // Hentikan scanner agar tidak scan dobel
+            html5QrcodeScanner.clear();
+            
+            // Cek apakah tab ini dibuka oleh App Script
+            if (window.opener) {
+                // Kirim data UID kembali ke tab App Script
+                window.opener.postMessage({ scannedUid: decodedText }, "*");
+                
+                // Tutup tab ini otomatis
+                window.close(); 
+            } else {
+                alert("Hasil Scan: " + decodedText + "\n\n(Peringatan: Buka scanner ini melalui tombol di Aplikasi Bank Pesantren)");
+            }
+        }
+
+        // Konfigurasi Kamera Live
+        let html5QrcodeScanner = new Html5QrcodeScanner(
+            "reader",
+            { fps: 15, qrbox: {width: 250, height: 250}, aspectRatio: 1.0 },
+            false
+        );
+            
+        html5QrcodeScanner.render(onScanSuccess);
+    </script>
+</body>
+</html>
